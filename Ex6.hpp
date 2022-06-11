@@ -14,17 +14,22 @@ class Team {
     private:
         std::string teamName;
         double skillLevel;
-        int totalPoints = 0;
+        int pointsGained = 0;
+        int pointsGiven = 0;
         std::vector<int> gameLog;
     public:
         Team(std::string, double);
-        std::string& getName();
-        double getSkill();
-        void print();
+        const std::string& getName() const;
+        double getSkill() const;
         void addToGameLog(int);
-        int getWinStreak();
-        int getTotalWins();
-        void addPoints(int);
+        int getWinStreak() const;
+        int getLoseStreak() const;
+        int getTotalWins() const;
+        void addPointsGained(int);
+        void addPointsGiven(int);
+        int getPointsGained() const;
+        int getPointsGiven() const;
+        void print() const;
 };
 
 class Game {
@@ -36,10 +41,10 @@ class Game {
         Team *winner;
     public:
         Game(Team *, Team *);
-        Team& getHomeTeam();
-        Team& getAwayTeam();
+        Team& getHomeTeam() const;
+        Team& getAwayTeam() const;
         void setScoresAndWinner();
-        void print();
+        void print() const;
 };
 
 class League {
@@ -49,8 +54,8 @@ class League {
         League(); // all random
         League(std::vector<Team *> teams); // all teams
         League(std::vector<Team *> teams, int); // teams and random
-        std::vector<Team *> getTeams();
-        void print();
+        std::vector<Team *>& getTeams();
+        void print() const;
 };
 
 class Schedule {
@@ -61,8 +66,8 @@ class Schedule {
         public:
             Cycle();
             void addGame(Game *game);
-            std::vector<Game *>& getGames();
-            void print();
+            std::vector<Game *>& getGames() const;
+            void print() const;
     };
 
     private:
@@ -70,5 +75,12 @@ class Schedule {
         std::vector<Cycle*> cycles;
     public:
         Schedule(League *league = nullptr);
-        void print();
+        static void rotate(std::vector<Team *> &, std::vector<Team *> &);
+        void sort();
+        void showScoreTable() const;
+        void showLeadingTeams(int) const;
+        void longestWinStreak() const;
+        void longestLoseStreak() const;
+        void positiveDiff() const;
+        void print() const;
 };
