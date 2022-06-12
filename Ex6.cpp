@@ -3,7 +3,10 @@
 // ------------------TEAM----------------------
 
 Team::Team(std::string name, double skill) {
-    this->teamName = name;
+    if (skill >= 1 or skill <= 0) {
+        throw std::logic_error("Skill of a team has to be between 0 and 1");
+    }
+    this->teamName = std::move(name);
     this->skillLevel = skill;
 }
 
@@ -16,6 +19,9 @@ double Team::getSkill() const {
 }
 
 void Team::addToGameLog(int toAdd) {
+    if (toAdd != 0 and toAdd != 1) {
+        throw std::logic_error("Can only add 1's or 0's to game log");
+    }
     this->gameLog.push_back(toAdd);
 }
 
@@ -31,7 +37,7 @@ int Team::getWinStreak() const {
     int streak = 0;
     int longestStreak = 0;
     for(int num : gameLog) {    
-        if (num == win) {
+        if (num == WIN) {
             streak++;
         } else {
             streak = 0;
@@ -47,7 +53,7 @@ int Team::getLoseStreak() const {
     int streak = 0;
     int longestStreak = 0;
     for(int num : gameLog) {    
-        if (num == lose) {
+        if (num == LOSE) {
             streak++;
         } else {
             streak = 0;
@@ -60,10 +66,16 @@ int Team::getLoseStreak() const {
 }
 
 void Team::addPointsGained(int points) {
+    if (points < 0) {
+        throw std::logic_error("Cant add negative points");
+    }
     this->pointsGained+=points;
 }
 
 void Team::addPointsGiven(int points) {
+    if (points < 0) {
+        throw std::logic_error("Cant add negative points");
+    }
     this->pointsGiven+=points;
 }
 
@@ -102,34 +114,30 @@ Team& Game::getAwayTeam() const {
 
 void Game::setScoresAndWinner() {
     // set scores between 50-100
-    while (homeTeamScore < 55 or homeTeamScore > 100) {
+    while (homeTeamScore < MIN_WINS_HOME or homeTeamScore > MAX_WINS) {
         this->homeTeamScore = d(gen);
     }
-    while (awayTeamScore < 50 or awayTeamScore > 100) {
+    while (awayTeamScore < MIN_WINS_AWAY or awayTeamScore > MAX_WINS) {
         this->awayTeamScore = d(gen);
     }
 
     //add bonus according to team's skill
-    homeTeamScore = homeTeamScore + (int)(10 * homeTeam->getSkill());
-    awayTeamScore = awayTeamScore + (int)(10 * awayTeam->getSkill());
+    homeTeamScore = homeTeamScore + (int)(MAX_BONUS * homeTeam->getSkill());
+    awayTeamScore = awayTeamScore + (int)(MAX_BONUS * awayTeam->getSkill());
 
     //handle match results
     if (homeTeamScore > awayTeamScore) {
-        winner = this->homeTeam;
         this->homeTeam->addToGameLog(1);
         this->awayTeam->addToGameLog(0);
         
     } else if (homeTeamScore < awayTeamScore) {
-        winner = this->awayTeam;
         this->homeTeam->addToGameLog(0);
         this->awayTeam->addToGameLog(1);
     } else {
         if (this->homeTeam->getSkill() >= this->awayTeam->getSkill()) {
-            winner = this->homeTeam;
             this->homeTeam->addToGameLog(1);
             this->awayTeam->addToGameLog(0);
         } else {
-            winner = this->awayTeam;
             this->homeTeam->addToGameLog(0);
             this->awayTeam->addToGameLog(1);
         }
@@ -141,7 +149,7 @@ void Game::setScoresAndWinner() {
 }
 
 void Game::print() const {
-    std::cout << "Game[home: " << homeTeam->getName() << ", " << homeTeamScore << " || away: " << awayTeam->getName() << ", " << awayTeamScore << " || winner: " << winner->getName() << "]" << std::endl;  
+    std::cout << "Game[home: " << homeTeam->getName() << ", " << homeTeamScore << " || away: " << awayTeam->getName() << ", " << awayTeamScore << "]" << std::endl;  
 }
 
 // ------------------GAME----------------------
@@ -149,23 +157,20 @@ void Game::print() const {
 // ------------------LEAGUE----------------------
 
 League::League() {
-    for (int i = 0; i < num_teams; i++) {
+    for (int i = 0; i < NUM_TEAMS; i++) {
         std::string team = "Team";
         teams.push_back(new Team(team.append(std::to_string(i)), ((double) rand() / (RAND_MAX))));
     }
 }
 
 League::League(std::vector<Team *> teams) {
-    for (unsigned int i = 0; i < teams.size(); i++) {
-        this->teams.push_back(teams[i]);
+    if (teams.size() > NUM_TEAMS) {
+        throw std::logic_error("Number of teams in a league is 20, can insert 20 or less and rest will be random");
     }
-}
-
-League::League(std::vector<Team *> teams, int dummy) {
     for (unsigned int i = 0; i < teams.size(); i++) {
         this->teams.push_back(teams.at(i));
     }
-    for (unsigned int i = teams.size(); i < num_teams; i++) {
+    for (unsigned int i = teams.size(); i < NUM_TEAMS; i++) {
         std::string team = "Team";
         this->teams.push_back(new Team(team.append(std::to_string(i)), ((double) rand() / (RAND_MAX))));
     }
@@ -193,6 +198,10 @@ void Schedule::Cycle::addGame(Game *game) {
     this->games.push_back(game);
 }
 
+std::vector<Game *>& Schedule::Cycle::getGames() {
+    return this->games;
+}
+
 void Schedule::Cycle::print() const {
     std::cout << "----- Begin Cycle -----" << std::endl;
     for (unsigned int i = 0; i < games.size(); i++) {
@@ -211,7 +220,10 @@ void Schedule::rotate(std::vector<Team *> &top, std::vector<Team *> &bot) {
     }
 
     bot[bot.size()-1] = v1copy[v1copy.size()-1];
-    for (int i = bot.size()-2; i >= 0; i--) {
+    for (unsigned int i = bot.size()-2; i >= 0; i--) {
+        if (i == (unsigned int) -1) {
+            break;
+        }
         bot[i] = v2copy[i+1];
     }
 }
@@ -232,34 +244,46 @@ Schedule::Schedule(League *league) {
             bot.push_back(this->league->getTeams()[i]);
         }
     }
-    Cycle *cycle_a;
-    Cycle *cycle_b;
-    Game *game;
+    Cycle *cycle_a = nullptr;
+    Cycle *cycle_b = nullptr;
+    Game *game = nullptr;
     for (unsigned int i = 0; i < this->league->getTeams().size()-1; i++) {
         if (i > 0) {
             rotate(top, bot);
         }
         cycle_a = new Cycle();
         cycle_b = new Cycle();
-        for (int k = 0; k < top.size(); k++) {
+        for (unsigned int k = 0; k < top.size(); k++) {
             cycle_a->addGame(new Game(top[k], bot[k]));
             cycle_b->addGame(new Game(bot[k], top[k]));
         }
         this->cycles.push_back(cycle_a);
         this->cycles.push_back(cycle_b);
     }
-
     sort();
+}
+
+Schedule::~Schedule() {
+    for (unsigned int i = 0; i < league->getTeams().size(); i++) {
+        delete(league->getTeams()[i]);
+    }
+    for (unsigned int i = 0; i < cycles.size(); i++) {
+        for (uint j = 0; j < cycles[i]->getGames().size(); j++) {
+            delete(cycles[i]->getGames()[j]);
+        }
+        delete(cycles[i]);
+    }
+    delete(this->league);
 }
 
 void Schedule::sort() {
     std::vector<Team *>& teams = league->getTeams();
     int size = teams.size();
     std::vector<Team *> sortedTeams;
-    Team *currTeam;
-    int currIndex;
-    int ratio;
-    int basketDifference;
+    Team *currTeam = nullptr;
+    uint currIndex = 0;
+    int ratio = 0;
+    int basketDifference = 0;
     while(sortedTeams.size() < size) {
         double bestRatio = -1;
         int bestBasketDifference = 0;
@@ -306,7 +330,7 @@ void Schedule::showLeadingTeams(int n) const {
 }
 
 void Schedule::longestWinStreak() const {
-    int streak;
+    int streak = 0;
     int maxStreak = 0;
     for (unsigned int i = 0; i < league->getTeams().size(); i++) {
         streak = league->getTeams()[i]->getWinStreak();
@@ -318,7 +342,7 @@ void Schedule::longestWinStreak() const {
 }
 
 void Schedule::longestLoseStreak() const {
-    int streak;
+    int streak = 0;
     int maxStreak = 0;
     for (unsigned int i = 0; i < league->getTeams().size(); i++) {
         streak = league->getTeams()[i]->getLoseStreak();
@@ -340,6 +364,15 @@ void Schedule::positiveDiff() const {
     std::cout << "Number of teams that gained more points then given: " << n << std::endl;
 }
 
+void Schedule::avgScore() const {
+    double totalPoints = 0;
+    for (Team *team : league->getTeams()) {
+        totalPoints+=team->getPointsGained();
+    }
+    size_t totalGames = (league->getTeams().size() * (league->getTeams().size() -1)) * 2;
+    std::cout << "Average points of a team per game: " << totalPoints / totalGames << std::endl;
+}
+
 void Schedule::print() const {
     for (unsigned int i = 0; i < cycles.size(); i++) {
         cycles[i]->print();
@@ -359,20 +392,18 @@ int main(int argc, char const *argv[]) {
     // Team *t7 = new Team("Team C", 0.7);
     // Team *t8 = new Team("Team D", 0.8);
     // std::vector<Team *> vec = {t1, t2 ,t3 ,t4, t5, t6, t7, t8};
+    // std::vector<Team *> vec = {t1, t2 ,t3 ,t4};
     // League *league = new League(vec);
-    Schedule *s = new Schedule();
-    // s->print();
 
-    // for (int i = 0; i < 20; i++) {
-    //     Game* game = new Game(t1, t2);
-    //     game->print();
-    // }
-    // t1->print();
-    // t2->print();
+    Schedule *s = new Schedule();
+
     s->showScoreTable();
-    s->showLeadingTeams(5);
+    // s->showLeadingTeams(5);
     s->longestWinStreak();
     s->longestLoseStreak();
     s->positiveDiff();
+    s->avgScore();
+    // s->~Schedule();
+    delete(s);
     return 0;
 }

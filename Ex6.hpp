@@ -3,10 +3,16 @@
 #include <iostream>
 #include <cmath>
 #include <random>
-const int num_teams = 20;
-const int win = 1;
-const int lose = 0;
-std::normal_distribution<> d{75, 5};
+const int NUM_TEAMS = 20;
+const int WIN = 1;
+const int LOSE = 0;
+const int EXPECTATION = 75;
+const int VARIANCE = 5;
+const int MAX_WINS = 100;
+const int MIN_WINS_HOME = 55;
+const int MIN_WINS_AWAY = 50;
+const int MAX_BONUS = 10;
+std::normal_distribution<> d{EXPECTATION, VARIANCE};
 std::random_device rd{};
 std::mt19937 gen{rd()};
 
@@ -19,6 +25,7 @@ class Team {
         std::vector<int> gameLog;
     public:
         Team(std::string, double);
+        // ~Team(); // default is fine
         const std::string& getName() const;
         double getSkill() const;
         void addToGameLog(int);
@@ -38,12 +45,11 @@ class Game {
         Team *awayTeam;
         int homeTeamScore = 0;
         int awayTeamScore = 0;
-        Team *winner;
+        void setScoresAndWinner();
     public:
         Game(Team *, Team *);
         Team& getHomeTeam() const;
         Team& getAwayTeam() const;
-        void setScoresAndWinner();
         void print() const;
 };
 
@@ -52,8 +58,7 @@ class League {
         std::vector<Team *> teams;
     public:
         League(); // all random
-        League(std::vector<Team *> teams); // all teams
-        League(std::vector<Team *> teams, int); // teams and random
+        League(std::vector<Team *> teams); // all teams or some teams some random
         std::vector<Team *>& getTeams();
         void print() const;
 };
@@ -66,7 +71,7 @@ class Schedule {
         public:
             Cycle();
             void addGame(Game *game);
-            std::vector<Game *>& getGames() const;
+            std::vector<Game *>& getGames();
             void print() const;
     };
 
@@ -75,6 +80,7 @@ class Schedule {
         std::vector<Cycle*> cycles;
     public:
         Schedule(League *league = nullptr);
+        ~Schedule();
         static void rotate(std::vector<Team *> &, std::vector<Team *> &);
         void sort();
         void showScoreTable() const;
@@ -82,5 +88,9 @@ class Schedule {
         void longestWinStreak() const;
         void longestLoseStreak() const;
         void positiveDiff() const;
+
+        void avgScore() const;
+        
+
         void print() const;
 };
